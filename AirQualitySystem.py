@@ -28,9 +28,8 @@ class RequestByCityCounty(object):
     def getParameterInfo(self):
         """Define parameter definitions"""
         # Input parameters
-        timeFrame = genParam('Time Frame', listOptions=['daily', 'hourly'])
-        spaceScale = genParam(
-            'Request for', listOptions=['city', 'county'])
+        timeFrame = genParam('Time Frame', filterList=['daily', 'hourly'])
+        spaceScale = genParam('Request for', filterList=['city', 'county'])
         zipCode = genParam('Use Any Zip in the Area to Look Up City-County-State',
                            dataType='Long', isVisible=False)
         state = genParam('State', isVisible=False)
@@ -135,8 +134,8 @@ class RequestByCityCounty(object):
         # Request air data
         df = pd.DataFrame()
         for yr in range(startYr, endYr + 1):
-            yrDf = requestSingleYr(timeFrame, scale, state, location,
-                                   yr, messages)
+            yrDf = requestSingleYr(timeFrame, scale, yr,
+                                   location, state, messages)
             df = pd.concat([df, yrDf])
         # Filter time
         rows = (df.Date >= pd.Timestamp(startDate)) & (
@@ -189,8 +188,8 @@ def lookUpByZip(zipcode: int):
 # ============================================================================ #
 
 
-def requestSingleYr(timeFrame: str, scale: str, state: str, location: str,
-                    year: int, messages):
+def requestSingleYr(timeFrame: str, scale: str, year: int,
+                    location: str, state: str, messages):
     # Request table zip and convert to df
     scale = 'county' if ('county' in scale) else 'cbsa'
     urlTemplate = 'https://aqs.epa.gov/aqsweb/airdata/{}_aqi_by_{}_{}.zip'
@@ -199,17 +198,17 @@ def requestSingleYr(timeFrame: str, scale: str, state: str, location: str,
     if (df.empty):
         messages.addWarningMessage(f'No data available in {year}')
     else:  # Clean fields
-        filterField = 'county Name' if ('county' in scale) else 'CBSA'
-        keys = ['Date', 'AQI', 'Category', 'Defining Parameter']
-        if (filterField == 'CBSA'):
-            col = '{}, {}'.format(location.capitalize(),
-                                  state.upper())
+        if ('county' in scale):
+            locCol = df['county Name']
         else:
-            col = location
-        df = df[df[filterField] == col]
+            cityStateCol = df['CBSA']
+            locCol = pd.DataFrame([cityState[:cityState.index(',')]
+                                   for cityState in cityStateCol.values])
+        keys = ['Date', 'AQI', 'Category', 'Defining Parameter']
+        df = df[locCol.values == location]
         df = df[keys]
+        df['Location'] = location
+        df['State'] = state
         df['Date'] = pd.to_datetime(df['Date'])
-        df[state] = state
-        df[location] = location
         df = df.rename(columns={'Defining Parameter': 'Pollutant'})
     return df
