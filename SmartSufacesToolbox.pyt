@@ -2,7 +2,7 @@
 
 import arcpy
 
-from RequestAirQuality import AirQualitySystem
+from AirQualitySystem import RequestByCityCounty
 
 arcpy.env.overwriteOutput = True
 
@@ -15,4 +15,4 @@ class Toolbox(object):
         self.alias = "Smart Surfaces Toolbox"
 
         # List of tool classes associated with this toolbox
-        self.tools = [AirQualitySystem]
+        self.tools = [RequestByCityCounty]
