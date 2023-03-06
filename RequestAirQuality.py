@@ -48,7 +48,7 @@ def get_legacy_session():
 class AirQualitySystem(object):
     def __init__(self):
         """Define the tool (tool name is the name of the class)."""
-        self.label = "Request AQS Data"
+        self.label = 'Request Air Quality Data by City/County'
         self.description = ""
         self.canRunInBackground = False
 
