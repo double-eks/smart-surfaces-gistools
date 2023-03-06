@@ -1,15 +1,13 @@
 # -*- coding: utf-8 -*-
-import ssl
-from datetime import datetime
-from email import message
+import re
+from datetime import date, datetime
+from urllib.request import urlopen
 
 import arcpy
-import requests
-import urllib3
+import pandas as pd
+from bs4 import BeautifulSoup
 
-from RequestAirQuality import AirQualitySystem
-
-arcpy.env.overwriteOutput = True
+from AirQualitySystem import RequestByCityCounty
 
 # ============================================================================ #
 # Geoprocessing tools
@@ -24,9 +22,10 @@ class Toolbox(object):
         self.alias = "toolbox"
 
         # List of tool classes associated with this toolbox
-        self.tools = [AirQualitySystem, AirNowByLoc]
+        self.tools = [RequestByCityCounty]
 
 
+'''
 # ============================================================================ #
 # Tool
 # ============================================================================ #
@@ -235,3 +234,4 @@ def get_legacy_session():
     session = requests.session()
     session.mount('https://', CustomHttpAdapter(ctx))
     return session
+'''
