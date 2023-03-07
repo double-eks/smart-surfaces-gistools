@@ -7,10 +7,10 @@ import pandas as pd
 from bs4 import BeautifulSoup
 
 from templates import (dfToStructuredArr, downloadZipToDf, enableChildParam,
-                       formatDateOnly, genDateParam, genParam)
+                       formatDateOnly, genDateParam, genFieldParam, genParam)
 
 # ============================================================================ #
-# Initial tool object
+# Request Air Quality Data by City/County
 # ============================================================================ #
 
 
@@ -28,7 +28,6 @@ class RequestByCityCounty(object):
     def getParameterInfo(self):
         """Define parameter definitions"""
         # Input parameters
-        timeFrame = genParam('Time Frame', filterList=['daily', 'hourly'])
         spaceScale = genParam('Request for', filterList=['city', 'county'])
         zipCode = genParam('Use Any Zip in the Area to Look Up City-County-State',
                            dataType='Long', isVisible=False)
@@ -36,8 +35,7 @@ class RequestByCityCounty(object):
         location = genParam('Location', isVisible=False)
         lookup = genParam('Check LookUp Location Before Go',
                           dataType='Boolean', isVisible=False)
-        startDate = genDateParam('Start Date')
-        endDate = genDateParam('End Date')
+        timeFrame, startDate, endDate = initTimeParams()
         # Set parameter dependency
         state.parameterDependencies = [zipCode.name]
         location.parameterDependencies = [zipCode.name]
@@ -47,12 +45,12 @@ class RequestByCityCounty(object):
         table = genParam('Output Table', dataType='Table', isInput=False)
         # Set the parameter properties
         params = [
-            timeFrame,
             spaceScale,
             zipCode,
             state,
             location,
             lookup,
+            timeFrame,
             startDate,
             endDate,
             table
@@ -63,18 +61,11 @@ class RequestByCityCounty(object):
         """Modify the values and properties of parameters before internal
         validation is performed.  This method is called whenever a parameter
         has been changed."""
-        scaleParam = parameters[1]
-        zipParam = parameters[2]
-        stateParam = parameters[3]
-        locParam = parameters[4]
-        checkParam = parameters[5]
-        startParam = parameters[6]
-        endParam = parameters[7]
-        outputParam = parameters[8]
+        scaleParam, zipParam, stateParam, locParam, checkParam, timeFrameParam, startParam, endParam, outputParam = parameters
 
         enableChildParam(scaleParam, zipParam)
         enableChildParam(zipParam, stateParam, locParam, checkParam)
-        formatDateOnly(startParam, endParam)
+        updateDateParams(startParam, endParam)
 
         if (zipParam.value):
             zipcode = zipParam.value
@@ -88,65 +79,117 @@ class RequestByCityCounty(object):
                 locParam.filter.list = [zipDf.county[zipcode]]
                 locParam.value = zipDf.county[zipcode]
 
-        if (startParam.value) and (not endParam.value):
-            startyr = int(startParam.valueAsText[:4])
-            endParam.value = date(startyr, 12, 31).strftime('%Y/%m/%d')
-
-        if (scaleParam.value) and (locParam.value) and (startParam.value):
+        if (locParam.value) and (startParam.value):
             if (not outputParam.altered):
-                tableName = '{}_{}_{}_aqi'.format(
+                tableName = '{}_{}_aqi'.format(
                     locParam.valueAsText,
-                    startParam.valueAsText[:4],
-                    parameters[0].valueAsText
-                ).lower()
+                    startParam.valueAsText[:4]
+                )
                 tableName = tableName.replace(' ', '_')
                 outputParam.value = arcpy.env.workspace + '\\' + tableName
 
     def updateMessages(self, parameters):
         """Modify the messages created by internal validation for each tool
         parameter.  This method is called after internal validation."""
-        zipParam = parameters[2]
-        startParam = parameters[6]
-        endParam = parameters[7]
+        scaleParam, zipParam, stateParam, locParam, checkParam, timeFrameParam, startParam, endParam, outputParam = parameters
+        validateDates(startParam, endParam)
         if (zipParam.value):
             if (re.search(r'^\d{5}$', zipParam.valueAsText) == None):
                 zipParam.setErrorMessage('Invalid zip code')
-        if (startParam.value) and (endParam.value):
-            if (startParam.value >= endParam.value):
-                endParam.setErrorMessage('Invalid end date')
-            if (startParam.value > datetime(2022, 12, 31)):
-                startParam.setErrorMessage('No data available')
-            if (endParam.value > datetime(2022, 12, 31)):
-                endParam.setWarningMessage('No data available since 2023')
         return
 
     def execute(self, parameters, messages):
         """The source code of the tool."""
-        timeFrame = parameters[0].valueAsText
-        scale = parameters[1].valueAsText
-        state = parameters[3].valueAsText
-        location = parameters[4].valueAsText
-        startDate = parameters[6].valueAsText
-        endDate = parameters[7].valueAsText
-        startYr = int(startDate[:4])
-        endYr = int(endDate[:4])
-        outTable = parameters[8].valueAsText
-        # Request air data
-        df = pd.DataFrame()
-        for yr in range(startYr, endYr + 1):
-            yrDf = requestSingleYr(timeFrame, scale, yr,
-                                   location, state, messages)
-            df = pd.concat([df, yrDf])
-        # Filter time
-        rows = (df.Date >= pd.Timestamp(startDate)) & (
-            df.Date <= pd.Timestamp(endDate))
-        df = df.loc[rows]
-        if (df.empty):
-            messages.addWarningMessage('No data found')
+        scaleParam, zipParam, stateParam, locParam, checkParam, timeFrameParam, startParam, endParam, outputParam = parameters
+        scale = scaleParam.valueAsText
+        timeFrame = timeFrameParam.valueAsText
+
+        urlTemplate = f'https://aqs.epa.gov/aqsweb/airdata/{timeFrame}_aqi_'
+        if ('city' in scale):
+            urlTemplate = urlTemplate + 'by_cbsa_{}.zip'
         else:
-            # Dataframe to structured array to table
-            arr = dfToStructuredArr(df)
-            arcpy.da.NumPyArrayToTable(arr, outTable)
+            urlTemplate = urlTemplate + 'by_county_{}.zip'
+
+        df = requestAirQuality(urlTemplate, startParam, endParam)
+        # Get the data of location
+        location = locParam.valueAsText
+        df = df[df.Location.str.lower() == location.lower()]
+        outputTableFromDf(outputParam, df, messages)
+        return
+
+    def postExecute(self, parameters):
+        """This method takes place after outputs are processed and
+        added to the display."""
+        return
+
+
+# ============================================================================ #
+# Request for City/County Feature
+# ============================================================================ #
+
+
+class CountyAirQuality(object):
+    def __init__(self):
+        """Define the tool (tool name is the name of the class)."""
+        self.label = "Request for County(s) Feature"
+        self.description = ""
+        self.canRunInBackground = False
+
+    def getParameterInfo(self):
+        """Define parameter definitions"""
+        inputFeature = genParam(
+            'Input City/County Feature',
+            dataType=['Feature Class', 'Feature Layer', 'Table'])
+        idField = genFieldParam(
+            'GeoID Field', inputFeature, isVisible=False)
+        idField.filter.list = ['Text']
+        timeFrame, startDate, endDate = initTimeParams()
+        # Output parameter
+        table = genParam('Output Table', dataType='Table', isInput=False)
+        params = [
+            inputFeature,
+            idField,
+            timeFrame,
+            startDate,
+            endDate,
+            table
+        ]
+        return params
+
+    def isLicensed(self):
+        """Set whether tool is licensed to execute."""
+        return True
+
+    def updateParameters(self, parameters):
+        """Modify the values and properties of parameters before internal
+        validation is performed.  This method is called whenever a parameter
+        has been changed."""
+        inFeatureParam, idParam, timeFrameParam, startParam, endParam, outTableParam = parameters
+        updateDateParams(startParam, endParam)
+        enableChildParam(inFeatureParam, idParam)
+        return
+
+    def updateMessages(self, parameters):
+        """Modify the messages created by internal validation for each tool
+        parameter.  This method is called after internal validation."""
+        inFeatureParam, idParam, timeFrameParam, startParam, endParam, outTableParam = parameters
+        validateGeoID(inFeatureParam, idParam)
+        validateDates(startParam, endParam)
+        return
+
+    def execute(self, parameters, messages):
+        """The source code of the tool."""
+        inFeatureParam, idParam, timeFrameParam, startParam, endParam, outputParam = parameters
+        timeFrame = timeFrameParam.valueAsText
+        urlTemplate = f'https://aqs.epa.gov/aqsweb/airdata/{timeFrame}_aqi_'
+        urlTemplate = urlTemplate + 'by_county_{}.zip'
+        df = requestAirQuality(urlTemplate, startParam, endParam)
+        # Get the data of location
+        arr = arcpy.da.FeatureClassToNumPyArray(inFeatureParam.value,
+                                                idParam.valueAsText)
+        rows = [geoid[0] for geoid in arr]
+        df = df[df.GeoID.isin(rows)]
+        outputTableFromDf(outputParam, df, messages)
         return
 
     def postExecute(self, parameters):
@@ -157,6 +200,55 @@ class RequestByCityCounty(object):
 
 # ============================================================================ #
 # Define parameters
+# ============================================================================ #
+
+
+def initTimeParams():
+    timeFrame = genParam('Time Frame', filterList=['daily', 'hourly'])
+    startDate = genDateParam('Start Date')
+    endDate = genDateParam('End Date')
+    return timeFrame, startDate, endDate
+
+
+# ============================================================================ #
+# Update parameters
+# ============================================================================ #
+
+
+def updateDateParams(startParam, endParam):
+    formatDateOnly(startParam, endParam)
+    if (startParam.value) and (not endParam.value):
+        startyr = int(startParam.valueAsText[:4])
+        endParam.value = date(startyr, 12, 31).strftime('%Y/%m/%d')
+
+
+# ============================================================================ #
+# Validate parameters
+# ============================================================================ #
+
+
+def validateDates(startParam, endParam):
+    if (startParam.value) and (endParam.value):
+        if (startParam.value >= endParam.value):
+            endParam.setErrorMessage('Invalid end date')
+        if (startParam.value > datetime(2022, 12, 31)):
+            startParam.setErrorMessage('No data available')
+        if (endParam.value > datetime(2022, 12, 31)):
+            endParam.setWarningMessage('No data available since 2023')
+
+
+def validateGeoID(featureParam, idParam):
+    if (idParam.value):
+        geoidField = idParam.valueAsText
+        with arcpy.da.SearchCursor(featureParam.value, geoidField) as cursor:
+            rows = list(cursor)
+            geoid = rows[0][0]
+            if (re.search(r'^\d{5}$', geoid) == None):
+                idParam.setErrorMessage('Invalid county GeoID')
+
+
+# ============================================================================ #
+# Helper functions
 # ============================================================================ #
 
 
@@ -188,27 +280,43 @@ def lookUpByZip(zipcode: int):
 # ============================================================================ #
 
 
-def requestSingleYr(timeFrame: str, scale: str, year: int,
-                    location: str, state: str, messages):
-    # Request table zip and convert to df
-    scale = 'county' if ('county' in scale) else 'cbsa'
-    urlTemplate = 'https://aqs.epa.gov/aqsweb/airdata/{}_aqi_by_{}_{}.zip'
-    url = urlTemplate.format(timeFrame, scale, year)
-    df = downloadZipToDf(url)
-    if (df.empty):
-        messages.addWarningMessage(f'No data available in {year}')
-    else:  # Clean fields
-        if ('county' in scale):
-            locCol = df['county Name']
-        else:
-            cityStateCol = df['CBSA']
-            locCol = pd.DataFrame([cityState[:cityState.index(',')]
-                                   for cityState in cityStateCol.values])
-        keys = ['Date', 'AQI', 'Category', 'Defining Parameter']
-        df = df[locCol.values == location]
-        df = df[keys]
-        df['Location'] = location
-        df['State'] = state
-        df['Date'] = pd.to_datetime(df['Date'])
-        df = df.rename(columns={'Defining Parameter': 'Pollutant'})
+def requestAirQuality(urlTemplate, startParam, endParam):
+    startDate = startParam.valueAsText
+    endDate = endParam.valueAsText
+    startYr = int(startDate[:4])
+    endYr = int(endDate[:4])
+    df = pd.DataFrame()
+    for yr in range(startYr, endYr + 1):
+        url = urlTemplate.format(yr)
+        yrDf = downloadZipToDf(url)
+        yrDf = genAirQualityDf(yrDf, startDate, endDate)
+        df = pd.concat([df, yrDf])
     return df
+
+
+def genAirQualityDf(df: pd.DataFrame, start: str = '', end: str = ''):
+    if ('CBSA' in df.columns.values):
+        df['GeoID'] = df['CBSA Code']
+        df[['Location', 'State']] = df['CBSA'].str.split(', ', expand=True)
+    else:
+        geoids = [str(df['State Code'][i]).rjust(2, '0') +
+                  str(df['County Code'][i]).rjust(3, '0') for i in df.index]
+        df['GeoID'] = geoids
+        df['Location'] = df['county Name']
+    df = df.rename(columns={'Defining Parameter': 'Pollutant'})
+    df['Date'] = pd.to_datetime(df['Date'])
+    if (start != '') and (end != ''):
+        df = df.loc[
+            (df.Date >= pd.Timestamp(start)) & (df.Date <= pd.Timestamp(end))
+        ]
+    outCols = ['GeoID', 'Location', 'Date', 'Pollutant', 'Category', 'AQI']
+    return df[outCols]
+
+
+def outputTableFromDf(outputParam, df, messages):
+    if (df.empty):
+        messages.addWarningMessage('No data found')
+    else:
+        # Dataframe to structured array to table
+        arr = dfToStructuredArr(df)
+        arcpy.da.NumPyArrayToTable(arr, outputParam.valueAsText)

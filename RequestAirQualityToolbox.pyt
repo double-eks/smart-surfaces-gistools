@@ -1,14 +1,9 @@
 # -*- coding: utf-8 -*-
-import re
-from datetime import date, datetime
-from urllib.request import urlopen
 
 import arcpy
 import pandas as pd
-from bs4 import BeautifulSoup
 
-from AirQualitySystem import RequestByCityCounty
-from templates import enableChildParam, genDateParam, genFieldParam, genParam
+from AirQualitySystem import CountyAirQuality, RequestByCityCounty
 
 # ============================================================================ #
 # Geoprocessing tools
@@ -23,59 +18,7 @@ class Toolbox(object):
         self.alias = "toolbox"
 
         # List of tool classes associated with this toolbox
-        self.tools = [RequestByCityCounty, CityCountyAirQuality]
-
-
-class CityCountyAirQuality(object):
-    def __init__(self):
-        """Define the tool (tool name is the name of the class)."""
-        self.label = "Request for City/County Feature"
-        self.description = ""
-        self.canRunInBackground = False
-
-    def getParameterInfo(self):
-        """Define parameter definitions"""
-        inputFeature = genParam('Input City/County Feature',
-                                dataType=['Feature Class', 'Feature Layer'])
-        nameField = genFieldParam('Field of City/County Name', inputFeature,
-                                  isVisible=False)
-        nameField.filter.list = ['Text']
-        spaceScale = genParam('Request for', filterList=['city', 'county'])
-        debug = genParam('debug', dataType='Long')
-        params = [
-            inputFeature,
-            nameField,
-            spaceScale,
-            debug
-        ]
-        return params
-
-    def isLicensed(self):
-        """Set whether tool is licensed to execute."""
-        return True
-
-    def updateParameters(self, parameters):
-        """Modify the values and properties of parameters before internal
-        validation is performed.  This method is called whenever a parameter
-        has been changed."""
-        inputFeature = parameters[0]
-        nameField = parameters[1]
-        enableChildParam(inputFeature, nameField)
-        return
-
-    def updateMessages(self, parameters):
-        """Modify the messages created by internal validation for each tool
-        parameter.  This method is called after internal validation."""
-        return
-
-    def execute(self, parameters, messages):
-        """The source code of the tool."""
-        return
-
-    def postExecute(self, parameters):
-        """This method takes place after outputs are processed and
-        added to the display."""
-        return
+        self.tools = [RequestByCityCounty, CountyAirQuality]
 
 
 '''
