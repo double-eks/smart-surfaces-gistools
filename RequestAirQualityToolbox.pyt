@@ -3,7 +3,7 @@
 import arcpy
 import pandas as pd
 
-from AirQualitySystem import CountyAirQuality, RequestByCityCounty
+from AirQualitySystem import RequestByCounty, RequestByZip
 
 # ============================================================================ #
 # Geoprocessing tools
@@ -18,14 +18,14 @@ class Toolbox(object):
         self.alias = "toolbox"
 
         # List of tool classes associated with this toolbox
-        self.tools = [RequestByCityCounty, CountyAirQuality]
+        self.tools = [RequestByZip, RequestByCounty]
 
 
-'''
 # ============================================================================ #
 # Tool
 # ============================================================================ #
 
+'''
 
 class AirNowByLoc(object):
     def __init__(self):

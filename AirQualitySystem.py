@@ -10,14 +10,14 @@ from templates import (dfToStructuredArr, downloadZipToDf, enableChildParam,
                        formatDateOnly, genDateParam, genFieldParam, genParam)
 
 # ============================================================================ #
-# Request Air Quality Data by City/County
+# Request Daily AQI by ZIP Code
 # ============================================================================ #
 
 
-class RequestByCityCounty(object):
+class RequestByZip(object):
     def __init__(self):
         """Define the tool (tool name is the name of the class)."""
-        self.label = 'Request Air Quality Data by City/County'
+        self.label = 'Request Daily AQI by ZIP Code'
         self.description = ""
         self.canRunInBackground = False
 
@@ -35,7 +35,7 @@ class RequestByCityCounty(object):
         location = genParam('Location', isVisible=False)
         lookup = genParam('Check LookUp Location Before Go',
                           dataType='Boolean', isVisible=False)
-        timeFrame, startDate, endDate = initTimeParams()
+        startDate, endDate = initTimeParams()
         # Set parameter dependency
         state.parameterDependencies = [zipCode.name]
         location.parameterDependencies = [zipCode.name]
@@ -50,7 +50,6 @@ class RequestByCityCounty(object):
             state,
             location,
             lookup,
-            timeFrame,
             startDate,
             endDate,
             table
@@ -61,7 +60,7 @@ class RequestByCityCounty(object):
         """Modify the values and properties of parameters before internal
         validation is performed.  This method is called whenever a parameter
         has been changed."""
-        scaleParam, zipParam, stateParam, locParam, checkParam, timeFrameParam, startParam, endParam, outputParam = parameters
+        scaleParam, zipParam, stateParam, locParam, checkParam, startParam, endParam, outputParam = parameters
 
         enableChildParam(scaleParam, zipParam)
         enableChildParam(zipParam, stateParam, locParam, checkParam)
@@ -91,7 +90,7 @@ class RequestByCityCounty(object):
     def updateMessages(self, parameters):
         """Modify the messages created by internal validation for each tool
         parameter.  This method is called after internal validation."""
-        scaleParam, zipParam, stateParam, locParam, checkParam, timeFrameParam, startParam, endParam, outputParam = parameters
+        scaleParam, zipParam, stateParam, locParam, checkParam, startParam, endParam, outputParam = parameters
         validateDates(startParam, endParam)
         if (zipParam.value):
             if (re.search(r'^\d{5}$', zipParam.valueAsText) == None):
@@ -100,15 +99,13 @@ class RequestByCityCounty(object):
 
     def execute(self, parameters, messages):
         """The source code of the tool."""
-        scaleParam, zipParam, stateParam, locParam, checkParam, timeFrameParam, startParam, endParam, outputParam = parameters
+        scaleParam, zipParam, stateParam, locParam, checkParam, startParam, endParam, outputParam = parameters
         scale = scaleParam.valueAsText
-        timeFrame = timeFrameParam.valueAsText
 
-        urlTemplate = f'https://aqs.epa.gov/aqsweb/airdata/{timeFrame}_aqi_'
         if ('city' in scale):
-            urlTemplate = urlTemplate + 'by_cbsa_{}.zip'
+            urlTemplate = 'https://aqs.epa.gov/aqsweb/airdata/daily_aqi_by_cbsa_{}.zip'
         else:
-            urlTemplate = urlTemplate + 'by_county_{}.zip'
+            urlTemplate = 'https://aqs.epa.gov/aqsweb/airdata/daily_aqi_by_county_{}.zip'
 
         df = requestAirQuality(urlTemplate, startParam, endParam)
         # Get the data of location
@@ -124,14 +121,14 @@ class RequestByCityCounty(object):
 
 
 # ============================================================================ #
-# Request for City/County Feature
+# Request Daily AQI by County Feature
 # ============================================================================ #
 
 
-class CountyAirQuality(object):
+class RequestByCounty(object):
     def __init__(self):
         """Define the tool (tool name is the name of the class)."""
-        self.label = "Request for County(s) Feature"
+        self.label = 'Request Daily AQI by County Feature'
         self.description = ""
         self.canRunInBackground = False
 
@@ -143,13 +140,12 @@ class CountyAirQuality(object):
         idField = genFieldParam(
             'GeoID Field', inputFeature, isVisible=False)
         idField.filter.list = ['Text']
-        timeFrame, startDate, endDate = initTimeParams()
+        startDate, endDate = initTimeParams()
         # Output parameter
         table = genParam('Output Table', dataType='Table', isInput=False)
         params = [
             inputFeature,
             idField,
-            timeFrame,
             startDate,
             endDate,
             table
@@ -164,7 +160,7 @@ class CountyAirQuality(object):
         """Modify the values and properties of parameters before internal
         validation is performed.  This method is called whenever a parameter
         has been changed."""
-        inFeatureParam, idParam, timeFrameParam, startParam, endParam, outTableParam = parameters
+        inFeatureParam, idParam, startParam, endParam, outputParam = parameters
         updateDateParams(startParam, endParam)
         enableChildParam(inFeatureParam, idParam)
         return
@@ -172,17 +168,15 @@ class CountyAirQuality(object):
     def updateMessages(self, parameters):
         """Modify the messages created by internal validation for each tool
         parameter.  This method is called after internal validation."""
-        inFeatureParam, idParam, timeFrameParam, startParam, endParam, outTableParam = parameters
+        inFeatureParam, idParam, startParam, endParam, outputParam = parameters
         validateGeoID(inFeatureParam, idParam)
         validateDates(startParam, endParam)
         return
 
     def execute(self, parameters, messages):
         """The source code of the tool."""
-        inFeatureParam, idParam, timeFrameParam, startParam, endParam, outputParam = parameters
-        timeFrame = timeFrameParam.valueAsText
-        urlTemplate = f'https://aqs.epa.gov/aqsweb/airdata/{timeFrame}_aqi_'
-        urlTemplate = urlTemplate + 'by_county_{}.zip'
+        inFeatureParam, idParam, startParam, endParam, outputParam = parameters
+        urlTemplate = 'https://aqs.epa.gov/aqsweb/airdata/daily_aqi_by_county_{}.zip'
         df = requestAirQuality(urlTemplate, startParam, endParam)
         # Get the data of location
         arr = arcpy.da.FeatureClassToNumPyArray(inFeatureParam.value,
@@ -204,10 +198,9 @@ class CountyAirQuality(object):
 
 
 def initTimeParams():
-    timeFrame = genParam('Time Frame', filterList=['daily', 'hourly'])
     startDate = genDateParam('Start Date')
     endDate = genDateParam('End Date')
-    return timeFrame, startDate, endDate
+    return startDate, endDate
 
 
 # ============================================================================ #
