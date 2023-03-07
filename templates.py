@@ -11,8 +11,7 @@ import urllib3
 
 def genParam(name: str, dataType: str = 'GPString', parameterType='Required',
              isInput: bool = True, isVisible: bool = True, isFiltered: bool = False,
-             filterType: str = 'ValueList',
-             filterList: list = []):
+             filterType: str = 'ValueList', filterList: list = []):
     """
     Generate a generic arcpy parameter
     Args:
@@ -69,13 +68,6 @@ def genFieldParam(name: str, parent):
     fieldParam = genParam(name, dataType='Field')
     fieldParam.parameterDependencies = [parent.name]
     return fieldParam
-
-
-def genFieldListParam(name: str, parent):
-    param = genParam(name, dataType='GPValueTable')
-    param.columns = ['Field']
-    param.parameterDependencies = [parent.name]
-    return param
 
 
 def genDateParam(name: str):

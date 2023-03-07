@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import os
+
 import arcpy
 
 
@@ -39,11 +41,64 @@ class JoinMultiTables(object):
         )
         geoidField.filter.list = ['Text']
         geoidField.parameterDependencies = [inFeature.name]
-        # keptFields= genFieldListParam('Input Fields to Be Kept', inFeature)
+        keptFields = arcpy.Parameter(
+            displayName='Input Fields to Keep',
+            name='Input-Fields-to-Keep',
+            datatype='Field',
+            parameterType='Optional',
+            direction='Input',
+            multiValue=True
+        )
+        keptFields.parameterDependencies = [inFeature.name]
+        inFolder = arcpy.Parameter(
+            displayName='Input Folder',
+            name='Input-Folder',
+            datatype='DEFolder',
+            parameterType='Required',
+            direction='Input',
+        )
+        inTables = arcpy.Parameter(
+            displayName='Input Tables',
+            name='Input-Tables',
+            datatype='File',
+            parameterType='Required',
+            direction='Input',
+            multiValue=True
+        )
+        inTables.filter.list = ['csv']
+        inTables.parameterDependencies = [inFolder.name]
+        outTable = arcpy.Parameter(
+            displayName='Output Table',
+            name='Output-Table',
+            datatype='GPString',
+            parameterType='Required',
+            direction='Output',
+        )
+        keepOutTable = arcpy.Parameter(
+            displayName='Whether to Save Output Table',
+            name='Whether-to-Save-Output-Table',
+            datatype='Boolean',
+            parameterType='Optional',
+            direction='Input',
+        )
+        keepOutTable.value = False
+        outFeature = arcpy.Parameter(
+            displayName='Output Feature',
+            name='Output-Feature',
+            datatype=['Feature Class', 'Feature Layer'],
+            parameterType='Required',
+            direction='Output',
+        )
+        outFeature.parameterDependencies = [inFeature.name]
         params = [
             inFeature,
-            # geoidField,
-            # keptFields
+            geoidField,
+            keptFields,
+            inFolder,
+            inTables,
+            outTable,
+            keepOutTable,
+            outFeature
         ]
         return params
 
@@ -55,6 +110,16 @@ class JoinMultiTables(object):
         """Modify the values and properties of parameters before internal
         validation is performed.  This method is called whenever a parameter
         has been changed."""
+        inFeatureParam, geoidParam, fieldsParam = parameters[:3]
+        inTableFolderParam, inTablesParam = parameters[3:5]
+        outTable, keepOutTable, outFeature = parameters[5:]
+        if (geoidParam.value):
+            if (not fieldsParam.value):
+                fieldsParam.value = geoidParam.value
+        if (inTableFolderParam.value):
+            if (not inTablesParam.value):
+                inTablesParam.value = readTablesInFolder(
+                    inTableFolderParam.valueAsText)
         return
 
     def updateMessages(self, parameters):
@@ -70,3 +135,9 @@ class JoinMultiTables(object):
         """This method takes place after outputs are processed and
         added to the display."""
         return
+
+
+def readTablesInFolder(folder: str):
+    tables = [folder + '\\' +
+              filename for filename in os.listdir(folder) if filename.endswith('.csv')]
+    return tables
