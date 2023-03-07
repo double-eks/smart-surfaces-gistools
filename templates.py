@@ -12,7 +12,7 @@ import urllib3
 def genParam(name: str, dataType: str = 'GPString', parameterType='Required',
              isInput: bool = True, isVisible: bool = True, isFiltered: bool = False,
              filterType: str = 'ValueList',
-             filterList: list = [], **kwargs):
+             filterList: list = []):
     """
     Generate a generic arcpy parameter
     Args:
@@ -47,7 +47,6 @@ def genParam(name: str, dataType: str = 'GPString', parameterType='Required',
         datatype=dataType,
         parameterType=parameterType,
         direction=paramDir,
-        **kwargs
     )
     param.enabled = isVisible
     if (isFiltered) or (filterType != 'ValueList'):
@@ -58,7 +57,7 @@ def genParam(name: str, dataType: str = 'GPString', parameterType='Required',
     return param
 
 
-def genFieldParam(name: str, parent, **kwargs):
+def genFieldParam(name: str, parent):
     """
     Generate a field parameter depending on a given feature parameter
     Args:
@@ -67,9 +66,16 @@ def genFieldParam(name: str, parent, **kwargs):
     Keyword Arguments:
         isInput | isVisible | isFiltered | filterType | filterList
     """
-    fieldParam = genParam(name, dataType='Field', **kwargs)
+    fieldParam = genParam(name, dataType='Field')
     fieldParam.parameterDependencies = [parent.name]
     return fieldParam
+
+
+def genFieldListParam(name: str, parent):
+    param = genParam(name, dataType='GPValueTable')
+    param.columns = ['Field']
+    param.parameterDependencies = [parent.name]
+    return param
 
 
 def genDateParam(name: str):
