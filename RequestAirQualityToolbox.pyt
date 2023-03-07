@@ -1,13 +1,9 @@
 # -*- coding: utf-8 -*-
-import re
-from datetime import date, datetime
-from urllib.request import urlopen
 
 import arcpy
 import pandas as pd
-from bs4 import BeautifulSoup
 
-from AirQualitySystem import RequestByCityCounty
+from AirQualitySystem import RequestByCounty, RequestByZip
 
 # ============================================================================ #
 # Geoprocessing tools
@@ -22,14 +18,14 @@ class Toolbox(object):
         self.alias = "toolbox"
 
         # List of tool classes associated with this toolbox
-        self.tools = [RequestByCityCounty]
+        self.tools = [RequestByZip, RequestByCounty]
 
 
-'''
 # ============================================================================ #
 # Tool
 # ============================================================================ #
 
+'''
 
 class AirNowByLoc(object):
     def __init__(self):

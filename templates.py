@@ -9,14 +9,34 @@ import requests
 import urllib3
 
 
-def genParam(name: str,
-             dataType: str = 'GPString',
-             parameterType='Required',
-             isInput: bool = True,
-             isVisible: bool = True,
-             isFiltered: bool = False,
+def genParam(name: str, dataType: str = 'GPString', parameterType='Required',
+             isInput: bool = True, isVisible: bool = True, isFiltered: bool = False,
              filterType: str = 'ValueList',
-             listOptions: list = []):
+             filterList: list = [], **kwargs):
+    """
+    Generate a generic arcpy parameter
+    Args:
+        name (str): display name
+        dataType (str, optional): parameter data type 
+                Defaults to 'GPString'
+        parameterType (str, optional): Required | Optional | Derived
+                Defaults to 'Required'
+        isInput (bool, optional): 
+                Defaults to True
+                        True for an Input Parameter while False for Output 
+        isVisible (bool, optional): 
+                Defaults to True
+                        True for an initially Enabled Parameter while False for Disabled
+        isFiltered (bool, optional): 
+                Defaults to False
+                        True to set up parameter filter 
+        filterType (str, optional): Value List | Range | Feature Class | File | Field | Workspace 
+                Defaults to 'ValueList'
+        filterList (list, optional): A list of values for the filter 
+                Defaults to []
+    Returns:
+        arcpy parameter object
+    """
     strictName = name
     if (' ' in name):
         strictName = strictName.replace(' ', '-')
@@ -26,15 +46,30 @@ def genParam(name: str,
         name=strictName,
         datatype=dataType,
         parameterType=parameterType,
-        direction=paramDir
+        direction=paramDir,
+        **kwargs
     )
     param.enabled = isVisible
     if (isFiltered) or (filterType != 'ValueList'):
         param.filter.type = filterType
-    if (listOptions != []):
+    if (filterList != []):
         param.filter.type = 'ValueList'
-        param.filter.list = listOptions
+        param.filter.list = filterList
     return param
+
+
+def genFieldParam(name: str, parent, **kwargs):
+    """
+    Generate a field parameter depending on a given feature parameter
+    Args:
+        name (str): _description_
+        parent (_type_): _description_
+    Keyword Arguments:
+        isInput | isVisible | isFiltered | filterType | filterList
+    """
+    fieldParam = genParam(name, dataType='Field', **kwargs)
+    fieldParam.parameterDependencies = [parent.name]
+    return fieldParam
 
 
 def genDateParam(name: str):
