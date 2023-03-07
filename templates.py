@@ -9,8 +9,9 @@ import requests
 import urllib3
 
 
-def genParam(name: str, dataType: str = 'GPString', parameterType='Required',
-             isInput: bool = True, isVisible: bool = True, isFiltered: bool = False,
+def genParam(name: str, dataType: str = 'GPString', paramType='Required',
+             isInput: bool = True, isVisible: bool = True,
+             isFiltered: bool = False, isMulti: bool = False,
              filterType: str = 'ValueList', filterList: list = []):
     """
     Generate a generic arcpy parameter
@@ -18,7 +19,7 @@ def genParam(name: str, dataType: str = 'GPString', parameterType='Required',
         name (str): display name
         dataType (str, optional): parameter data type 
                 Defaults to 'GPString'
-        parameterType (str, optional): Required | Optional | Derived
+        paramType (str, optional): Required | Optional | Derived
                 Defaults to 'Required'
         isInput (bool, optional): 
                 Defaults to True
@@ -44,19 +45,20 @@ def genParam(name: str, dataType: str = 'GPString', parameterType='Required',
         displayName=name,
         name=strictName,
         datatype=dataType,
-        parameterType=parameterType,
+        parameterType=paramType,
         direction=paramDir,
+        multiValue=isMulti
     )
     param.enabled = isVisible
     if (isFiltered) or (filterType != 'ValueList'):
         param.filter.type = filterType
     if (filterList != []):
-        param.filter.type = 'ValueList'
         param.filter.list = filterList
     return param
 
 
-def genFieldParam(name: str, parent):
+def genFieldParam(name: str, parent,
+                  fieldTypeFilter: list = [], isMulti: bool = False):
     """
     Generate a field parameter depending on a given feature parameter
     Args:
@@ -65,9 +67,11 @@ def genFieldParam(name: str, parent):
     Keyword Arguments:
         isInput | isVisible | isFiltered | filterType | filterList
     """
-    fieldParam = genParam(name, dataType='Field')
-    fieldParam.parameterDependencies = [parent.name]
-    return fieldParam
+    param = genParam(name, dataType='Field', isMulti=isMulti)
+    param.parameterDependencies = [parent.name]
+    if (fieldTypeFilter != []):
+        param.filter.list = fieldTypeFilter
+    return param
 
 
 def genDateParam(name: str):

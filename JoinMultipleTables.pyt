@@ -4,6 +4,8 @@ import os
 
 import arcpy
 
+from templates import genFieldParam, genParam
+
 
 class Toolbox(object):
     def __init__(self):
@@ -25,70 +27,22 @@ class JoinMultiTables(object):
 
     def getParameterInfo(self):
         """Define parameter definitions"""
-        inFeature = arcpy.Parameter(
-            displayName='Input Feature',
-            name='Input-Feature',
-            datatype=['Feature Class', 'Feature Layer', 'Table'],
-            parameterType='Required',
-            direction='Input'
-        )
-        geoidField = arcpy.Parameter(
-            displayName='GeoID Field',
-            name='GeoID-Field',
-            datatype='Field',
-            parameterType='Required',
-            direction='Input'
-        )
-        geoidField.filter.list = ['Text']
-        geoidField.parameterDependencies = [inFeature.name]
-        keptFields = arcpy.Parameter(
-            displayName='Input Fields to Keep',
-            name='Input-Fields-to-Keep',
-            datatype='Field',
-            parameterType='Optional',
-            direction='Input',
-            multiValue=True
-        )
-        keptFields.parameterDependencies = [inFeature.name]
-        inFolder = arcpy.Parameter(
-            displayName='Input Folder',
-            name='Input-Folder',
-            datatype='DEFolder',
-            parameterType='Required',
-            direction='Input',
-        )
-        inTables = arcpy.Parameter(
-            displayName='Input Tables',
-            name='Input-Tables',
-            datatype='File',
-            parameterType='Required',
-            direction='Input',
-            multiValue=True
-        )
-        inTables.filter.list = ['csv']
+        inFeature = genParam('Input Feature',
+                             dataType=['Feature Class', 'Feature Layer'])
+        geoidField = genFieldParam('GeoID Field', inFeature,
+                                   fieldTypeFilter=['Text'])
+        keptFields = genFieldParam('Input Fields to Keep', inFeature,
+                                   isMulti=True)
+        inFolder = genParam('Input Folder', dataType='DEFolder')
+        inTables = genParam('Input Tables', dataType='File',
+                            filterList=['csv'], isMulti=True)
         inTables.parameterDependencies = [inFolder.name]
-        outTable = arcpy.Parameter(
-            displayName='Output Table',
-            name='Output-Table',
-            datatype='GPString',
-            parameterType='Required',
-            direction='Output',
-        )
-        keepOutTable = arcpy.Parameter(
-            displayName='Whether to Save Output Table',
-            name='Whether-to-Save-Output-Table',
-            datatype='Boolean',
-            parameterType='Optional',
-            direction='Input',
-        )
+        outTable = genParam('Output Table', isInput=False)
+        keepOutTable = genParam('Whether to Save Output Table',
+                                dataType='Boolean', paramType='Optional')
         keepOutTable.value = False
-        outFeature = arcpy.Parameter(
-            displayName='Output Feature',
-            name='Output-Feature',
-            datatype=['Feature Class', 'Feature Layer'],
-            parameterType='Required',
-            direction='Output',
-        )
+        outFeature = genParam('Output Feature', isInput=False,
+                              dataType=['Feature Class', 'Feature Layer'])
         outFeature.parameterDependencies = [inFeature.name]
         params = [
             inFeature,
