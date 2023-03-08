@@ -120,6 +120,12 @@ def downloadZipToDf(url: str):
     return df
 
 
+def getFeatureValue(feature, field: str):
+    with arcpy.da.SearchCursor(feature, field) as cursor:
+        rows = list(cursor)
+        return rows[0][0]
+
+
 class CustomHttpAdapter (requests.adapters.HTTPAdapter):
     # "Transport adapter" that allows us to use custom ssl_context.
 

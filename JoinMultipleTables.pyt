@@ -5,7 +5,8 @@ import os
 import arcpy
 import pandas as pd
 
-from templates import genFieldParam, genParam
+from templates import (dfToStructuredArr, genFieldParam, genParam,
+                       getFeatureValue)
 
 
 class Toolbox(object):
@@ -72,7 +73,7 @@ class JoinMultiTables(object):
                 fieldsParam.value = geoidParam.value
         if (inTableFolderParam.value):
             if (not inTablesParam.value):
-                inTablesParam.value = readTablesInFolder(
+                inTablesParam.value = findTablesInFolder(
                     inTableFolderParam.valueAsText)
         return
 
@@ -85,17 +86,54 @@ class JoinMultiTables(object):
         """The source code of the tool."""
         inFeatureParam, geoidParam, fieldsParam = parameters[:3]
         inTableFolderParam, inTablesParam = parameters[3:5]
-        outTable, keepOutTable, outFeature = parameters[5:]
+        outTableParam, keepOutTable, outFeatureParam = parameters[5:]
         gdb = arcpy.env.workspace
+        idsample = getFeatureValue(inFeatureParam.value,
+                                   geoidParam.valueAsText)
 
+        inFeature = inFeatureParam.valueAsText
+        geoidField = geoidParam.valueAsText
+        keepFields = fieldsParam.valueAsText.split(';')
+        tableFold = inTableFolderParam.valueAsText
+        tables = inTablesParam.values
+        outTable = outTableParam.valueAsText
+        outFeature = outFeatureParam.valueAsText
         # Combine separated tables into one single data frame
-        messages.addMessage(
-            f'< 1> Start to merge all the tables in {inTableFolderParam.valueAsText} ...')
-        tableFiles = inTablesParam.values
-        tractID = 'TractID'
-        mergedDf = combineMultiTables(tableFiles, tractID)
-        messages.addMessage(
-            f'</1> Succeeded in merging')
+        messages.addMessage(f'- Merging all the tables in {tableFold}')
+        varDf = readTables(tables, idsample)
+        varFields = varDf.columns.values[:-1]
+        keepFields.extend(varFields)
+        joinField = 'ID'
+        varDf[joinField] = varDf.index.values
+        varArr = dfToStructuredArr(varDf)
+        arcpy.da.NumPyArrayToTable(varArr, gdb + '\\' + outTable)
+
+        # Generate a tract feature with only GEOID field
+        arcpy.AddMessage(f'- Joining {len(tables)} table(s) to {inFeature}')
+        arcpy.management.AddJoin(
+            in_layer_or_view=inFeature,
+            in_field=geoidField,
+            join_table=outTable,
+            join_field=joinField,
+            join_type="KEEP_ALL",
+            index_join_fields="NO_INDEX_JOIN_FIELDS"
+        )
+        arcpy.conversion.ExportFeatures(
+            in_features=inFeature,
+            out_features=outFeature,
+            where_clause="",
+            sort_field=None
+        )
+        arcpy.RemoveJoin_management(inFeature)
+        if (not keepOutTable.value):
+            arcpy.Delete_management(outTable)
+        arcpy.AddMessage(f'- Cleaning {outFeature}')
+        arcpy.management.DeleteField(
+            in_table=outFeature,
+            drop_field=keepFields,
+            method='KEEP_FIELDS'
+        )
+        arcpy.AddMessage('\nDONE!')
         return
 
     def postExecute(self, parameters):
@@ -104,42 +142,32 @@ class JoinMultiTables(object):
         return
 
 
-def readTablesInFolder(folder: str):
+def findTablesInFolder(folder: str):
     tables = [folder + '\\' +
-              filename for filename in os.listdir(folder) if filename.endswith('.csv')]
+              filename for filename in os.listdir(folder)
+              if filename.endswith('.csv')]
     return tables
 
 
-def combineMultiTables(tableFiles: list, tractID: str, isInitDf: bool = False):
-    df = pd.DataFrame()
-    for filepath in tableFiles:
-        variableDf = pd.read_csv(str(filepath))
-        currIdField = findIdField(str(filepath))
-        filename = filepath.split('\\')[-1]
-        # arcpy.AddMessage(
-        #     f'\t>>> find {filename} >>> id field named: {currIdField}')
-        if (not isInitDf):
-            df = variableDf[currIdField].to_frame()
-            df = df.rename(columns={currIdField: tractID})
-            isInitDf = True
-        df = df.join(variableDf.set_index(currIdField), on=tractID)
-        # arcpy.AddMessage(
-        #     f'\t>>> read {filename} >>> {len(variableDf)} rows, {len(variableDf.columns) - 1} fields')
-    return df
+def readTables(tables: list, idsample: str):
+    masterDf = pd.DataFrame()
+    for tablepath in tables:
+        df = pd.read_csv(str(tablepath))
+        idField = findIdField(df, idsample)
+        df[idField] = df[idField].astype(str)
+        df = df.set_index(idField)
+        # df = df.rename(columns={idField: sharedField})
+        if (masterDf.empty):
+            masterDf = df
+        else:
+            masterDf = pd.merge(masterDf, df,
+                                left_index=True, right_index=True)
+    return masterDf
 
 
-def findIdField(filepath: str):
-    # read only the second row of the CSV file
-    rSample = pd.read_csv(filepath, nrows=1).iloc[0]
-    idIndex = 0
-    for i in range(len(rSample)):
-        v = rSample[i]
-        if (isinstance(v, str)):
-            idIndex = i
-            break
-        elif (isinstance(v, float) or (isinstance(v, int))):
-            digitStr = str(int(v))
-            if (len(digitStr) == 11):
-                idIndex = i
-                break
-    return str(rSample.index[idIndex])
+def findIdField(df: pd.DataFrame, idsample: str) -> str:
+    for c in range(len(df.columns)):
+        field = df.columns[c]
+        value = str(df.iloc[0, c])
+        if (value.isdigit()) and (len(value) == len(idsample)):
+            return field
