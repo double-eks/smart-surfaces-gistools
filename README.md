@@ -1,7 +1,5 @@
 # ArcGIS Pro Toolboxes for Smart Surfaces Group, CMU SoA
 
-This is a package of ArcGIS Pro geoprocessing toolboxes developed by Sean X. from _Carnegie Mellon University_
-
 ## Table of Content
 
 1. Introduction\
