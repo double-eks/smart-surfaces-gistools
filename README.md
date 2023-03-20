@@ -35,7 +35,9 @@ https://drive.google.com/file/d/1nNYymfaDuDgh_RblMPtXlNQWrRB2ruo-/view?usp=shari
 
 ### Usage
 
-By using this tool once, you can streamline repetitive tasks and avoid concerns about the various types of GEOID data.
+By using this tool **once**, you can
+- streamline repetitive tasks 
+- avoid concerns about the various types of GEOID data, such as int/float to text.
 
 ### Parameters
 
