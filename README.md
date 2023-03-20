@@ -9,9 +9,10 @@ This is a package of ArcGIS Pro geoprocessing toolboxes developed by Sean X. fro
 2. Join Toolbox\
    [Join Multiple Tables to Feature](#Join1)
 3. Air Quality Toolbox\
-    [Request Daily AQI by ZIP](#aq1)\
-    [Request Daily AQI by County](#aq2)
-   <br>
+   [Request Daily AQI by ZIP](#aq1)\
+   [Request Daily AQI by County](#aq2)
+
+<br>
 
 <a id="how-to-use"></a>
 
