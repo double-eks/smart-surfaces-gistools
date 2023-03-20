@@ -72,6 +72,11 @@ By using this tool **once**, you can
 
 <i>coming soon</i>
 
+### Data Source
+
+- US EPA Air Quality System (AQS) - [Air Quality Data Collected at Outdoor Monitors Across the US](https://www.epa.gov/outdoor-air-quality-data)
+
+
 <br>
 <a id="aq2"></a>
 
@@ -87,10 +92,9 @@ By using this tool **once**, you can
 
 <i>coming soon</i>
 
-<br>
 
-## Data Source Credit
-
-### AirQualityToolbox.pyt
+### Data Source
 
 - US EPA Air Quality System (AQS) - [Air Quality Data Collected at Outdoor Monitors Across the US](https://www.epa.gov/outdoor-air-quality-data)
+
+<br>
