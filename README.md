@@ -11,7 +11,6 @@ This is a package of ArcGIS Pro geoprocessing toolboxes developed by Sean X. fro
 3. Air Quality Toolbox\
    [Request Daily AQI by ZIP](#aq1)\
    [Request Daily AQI by County](#aq2)
-
 <br>
 
 <a id="how-to-use"></a>
@@ -20,7 +19,7 @@ This is a package of ArcGIS Pro geoprocessing toolboxes developed by Sean X. fro
 
 1. Download the Zip file and decompress
 2. Make sure all the **.pyt** (ArcGIS python toolbox file) and **.py** files are in the same dictionary
-3. Open ArcGIS Pro **Catalog panel** -> **Toolboxes** -> **Add Toolbox**
+3. Open ArcGIS Pro **Catalog Panel** -> **Toolboxes** -> **Add Toolbox**
 4. Add one \***\*Toolbox.pyt**, choose one geoprocessing tool in the toolbox, and go!
 
 <br>
