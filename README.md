@@ -2,7 +2,7 @@
 
 This is a package of ArcGIS Pro geoprocessing toolboxes developed by Sean X. from _Carnegie Mellon University_
 
-## Table of content
+## Table of Content
 
 1. Introduction\
    [How to Use](#how-to-use)
