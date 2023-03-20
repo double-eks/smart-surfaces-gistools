@@ -5,8 +5,7 @@ import os
 import arcpy
 import pandas as pd
 
-from templates import (dfToStructuredArr, genFieldParam, genParam,
-                       getFeatureValue)
+from helpers import dfToStructuredArr, genFieldParam, genParam, getFeatureValue
 
 
 class Toolbox(object):
