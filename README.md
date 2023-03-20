@@ -9,9 +9,9 @@ This is a package of ArcGIS Pro geoprocessing toolboxes developed by Sean X. fro
 2. Join Toolbox\
    [Join Multiple Tables to Feature](#Join1)
 3. Air Quality Toolbox\
-   [Request Daily AQI by ZIP](#aq1)\
-   [Request Daily AQI by County](#aq2)
-<br>
+    [Request Daily AQI by ZIP](#aq1)\
+    [Request Daily AQI by County](#aq2)
+   <br>
 
 <a id="how-to-use"></a>
 
@@ -26,7 +26,7 @@ This is a package of ArcGIS Pro geoprocessing toolboxes developed by Sean X. fro
 
 <a id="Join1"></a>
 
-## (<u><i>JoinToolbox.pyt</i></u>) Join Multiple Tables to Feature
+## (<i>JoinToolbox.pyt</i>) Join Multiple Tables to Feature
 
 ### Tutorial Demo
 
@@ -35,15 +35,14 @@ https://drive.google.com/file/d/1nNYymfaDuDgh_RblMPtXlNQWrRB2ruo-/view?usp=shari
 ### Usage
 
 By using this tool **once**, you can
-- streamline repetitive tasks 
+
+- streamline repetitive tasks
 - avoid concerns about the various types of GEOID data, such as int/float to text.
 
 ### Parameters
 
-- Parameters for target feature:\
-  <u>Input Feature</u>, <u>GeoID Field</u>, <u>Input Fields to Keep</u>
-- Parameters for join table(s):\
-  <u>Input Folder</u>, <u>Input Tables</u>
+- Parameters for target feature: Input Feature, GeoID Field, Input Fields to Keep
+- Parameters for join table(s): Input Folder, Input Tables
 
 | Parameter                                | Direction        | Data Type           | Explanation                                                                                                                                |
 | ---------------------------------------- | ---------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -63,7 +62,7 @@ By using this tool **once**, you can
 
 <a id="aq1"></a>
 
-## (<u><i>AirQualityToolbox.pyt</i></u>) Request Daily AQI by ZIP
+## (<i>AirQualityToolbox.pyt</i>) Request Daily AQI by ZIP
 
 ### Usage
 
@@ -77,7 +76,7 @@ By using this tool **once**, you can
 <br>
 <a id="aq2"></a>
 
-## (<u><i>AirQualityToolbox.pyt</i></u>) Request Daily AQI by County
+## (<i>AirQualityToolbox.pyt</i>) Request Daily AQI by County
 
 ### Usage
 
